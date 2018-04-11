@@ -169,7 +169,9 @@ def clean_wind_speed_data(dat, wind_col, max_cutoff=75):
     
     return(dat)
     
-def aggregate_time_with_threshold(ser, time_resample_code, func="mean"):    
+    print("STOP- this is set  up for Wolverine 990 only at the moment; 2014 decrease in sensor digits recorded makes sensitivity bad!")
+    
+def aggregate_time_with_threshold(ser, time_resample_code, steps_in_period, threshold=0.9, func="mean", label_center=False):    
     '''
     ser: pandas series
     func - can be sum or mean
@@ -177,26 +179,37 @@ def aggregate_time_with_threshold(ser, time_resample_code, func="mean"):
     mth_dat=ser.resample(time_resample_code, convention='start').agg([func, 'count'])
     mth_dat.rename(columns={func:ser.name}, inplace=True)
     
-    #define timestep-dependent things
-    if time_resample_code in ['M', 'MS']:
-        steps_in_period=mth_dat.index.days_in_month
-    elif time_resample_code in ['A', 'Y', 'YS', 'AS']:
-        steps_in_period=pd.Series([365.0]*len(mth_dat))
-        steps_in_period.index=mth_dat.index
-    else:
-        print("stop! this freqency hasn't been prepared for; edit function")
+    #define timestep-dependent things; this is ABANDONED in favor of user input of "steps_in_period"
+#    if time_resample_code in ['M', 'MS']:
+#        steps_in_period=mth_dat.index.days_in_month
+#    elif time_resample_code in ['A', 'Y', 'YS', 'AS']:
+#        steps_in_period=pd.Series([365.0]*len(mth_dat))
+#        steps_in_period.index=mth_dat.index
+#    elif time_resample_code in ['H']:
+#        steps_in_period=pd.Series([4.0]*len(mth_dat))
+#        if (mth_dat.index[1] -mth_dat.index[0])!=pd.Timedelta(minutes=15):
+#            print('STOP; function assumes 15min input data; must adjust before proceeding')
+#    else:
+#        print("stop! this freqency hasn't been prepared for; edit function")
    
     # determine invalid steps
    # mth_dat['n_allowed_missing']=0.1 * steps_in_period
     mth_dat['pct']=mth_dat['count']/steps_in_period
-    invalid= mth_dat['count'] <= 0.9 * steps_in_period
+    invalid= mth_dat['count'] <= threshold * steps_in_period
     mth_dat['invalid']=invalid
     
     #Set invalid steps to NAN
     mth_dat.loc[mth_dat.invalid, ser.name]=pd.np.nan
     
     mth_dat.drop(['invalid', 'count'], axis=1, inplace=True)
-    return(mth_dat)
+    
+    #Label with the middle of the time bin (not first or last)
+    if label_center: #label aggregated with center of time bin
+        timestep=mth_dat.index.to_series().diff()[1]
+        middle_timebin_labels=mth_dat.index-timestep/2
+        mth_dat=mth_dat.set_index(middle_timebin_labels)
+
+    return(mth_dat[ser.name])
     
     
 #def toYearFraction(date):

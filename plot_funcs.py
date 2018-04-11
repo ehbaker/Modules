@@ -11,7 +11,7 @@ def pretty_p_val(pval):
     else:
         val="%f" %pval
         p_print="p= " +val[0:4]
-        print(p_print)
+        #print(p_print)
     return p_print
 
 def correlation_plot (col_x, col_y, corr_dat, label, color):
@@ -62,8 +62,8 @@ def OLS_plot(col_x, col_y, dat, hue=None, robust=False, title=None, color='blue'
 
     #Kendal-Tau (non-parametric)
     kt_dat=dat.dropna(subset=[col_x, col_y])
-    kendall_tau, kt_pval=scipy.stats.stats.kendalltau(kt_dat[col_y], kt_dat[col_x], nan_policy="omit")
-    kt_pval=pretty_p_val(kt_pval)
+    kendall_tau, kt_pval_num=scipy.stats.stats.kendalltau(kt_dat[col_y], kt_dat[col_x], nan_policy="omit")
+    kt_pval=pretty_p_val(kt_pval_num)
     
     
     #Build plot
@@ -76,6 +76,11 @@ def OLS_plot(col_x, col_y, dat, hue=None, robust=False, title=None, color='blue'
     plt.figtext(0.02, 0.01, r"K. $\tau$ = " + str(kendall_tau)[0:5] + "; " + kt_pval, horizontalalignment='left')
     ax = plt.gca()
     ax.set_title(title)
+    
+    #store results for function to return
+    d = {'r2': [r2], 'r2_p': [pval], 'slope': [slope], 'kendall_tau': [kendall_tau], 'kt_pval': [kt_pval_num]}
+    df = pd.DataFrame(data=d)
+    return(df)
     
     
     
